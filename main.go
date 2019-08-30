@@ -1,3 +1,5 @@
+// Управление: верх,низ - скорость; лево,право - мутация; N - новое поколение; W - показать вес первой змеи
+
 package main
 
 import (
@@ -140,11 +142,7 @@ func (k *LocalParam) startPopulation(numMut int) {
 		k.snakes[i].head.X, k.snakes[i].head.Y = 5+(5*i), 15+15*(i%3)
 		k.snakes[i].alive = true
 		k.karta.kletki[5+(5*i)][15+15*(i%3)] = 4
-		// Хвост появляется под змеёй
-		// for j := 0; j < k.lenSnakeStart; j++ {
-		// 	k.snakes[i].tail[j].X, k.snakes[i].tail[j].Y = k.snakes[i].head.X, k.snakes[i].head.Y-1-j
-		// 	k.karta.kletki[k.snakes[i].tail[j].X][k.snakes[i].tail[j].Y-1-j] = 3
-		// }
+
 		k.snakes[i].Mutation(numMut, k.mutationRate)
 	}
 }
@@ -159,7 +157,7 @@ func main() {
 		population:    12,
 		numLeaders:    3,
 		lenSnakeStart: 3,
-		numMut:        3,
+		numMut:        5,
 		generation:    1,
 	}
 
@@ -179,14 +177,12 @@ func main() {
 		this.createApple()
 
 	} else {
-		stat, _ := op.Stat()
-		b1 := make([]byte, stat.Size())
+		this.snakes = make([]Snake, 3)
+		for i := 0; i < 3; i++ {
+			this.snakes[i].Mutation(50, 0)
+		}
 
-		n, _ := op.Read(b1)
-		_ = json.Unmarshal(b1, &this.snakes)
-
-		op.Close()
-		p("Прочитаны байты:", n)
+		this.snakes[0].Load(op)
 
 		pf("snake 1: %1.2f\n", this.snakes[0].Brain.Weights)
 		this.generation = this.snakes[0].Generation
@@ -232,7 +228,7 @@ func main() {
 			case *sdl.QuitEvent:
 				running = false
 
-				db1, _ := json.Marshal(this.snakes[:3])
+				db1, _ := json.Marshal(this.snakes[0])
 				f, _ := os.Create("snakeLeaders.json")
 				kama, _ := f.Write(db1)
 				f.Close()
@@ -330,4 +326,18 @@ func clear(karta *MAP, apple int) {
 			}
 		}
 	}
+}
+
+// Load
+func (z *Snake) Load(op *os.File) {
+	stat, _ := op.Stat()
+	p("__", stat, "__")
+	b1 := make([]byte, stat.Size())
+
+	n, _ := op.Read(b1)
+	_ = json.Unmarshal(b1, z)
+
+	op.Close()
+	p("Прочитаны байты:", n)
+	p("Веса:", z.Brain.Weights)
 }

@@ -130,7 +130,7 @@ func (z *Snake) Mutation(numMut int, MutationRate float64) {
 	for j := 0; j < 4; j++ {
 		for i := 0; i < numMut; i++ {
 			// от -0.1 до 0.1 шаг:0.01
-			z.Brain.Weights[rand.Intn(50)][j] += (MutationRate * float64(r.Intn(20)) / 100) - 0.1*MutationRate
+			z.Brain.Weights[rand.Intn(50)][j] += (MutationRate * float64(r.Intn(10)) / 50) - 0.1*MutationRate
 		}
 	}
 }

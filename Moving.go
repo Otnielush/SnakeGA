@@ -19,8 +19,8 @@ import "math"
 type Snake struct {
 	head        Possition
 	tail        []Possition
-	Brain       Brain
-	ApplesEaten int
+	Brain       Brain `json:"Brain"`
+	ApplesEaten int   `json:"ApplesEaten"`
 	Moves       int
 	alive       bool
 	color       color
@@ -33,11 +33,12 @@ type Brain struct {
 	vision   [50]float64    //0-24 на яблоко, 25-50 на преграду
 	turns    [4]float64     //0-left, 1-right, 2-up, 3-down
 	desicion int            //left, right, up, down
-	Weights  [50][4]float64 //50*4=200
+	Weights  [50][4]float64 `json:"Weights"` //50*4=200
 }
 
 //For moving
 func (z *Snake) Move(k *LocalParam) {
+	// pf("___snakes: %1.2f\n", z.Brain.Weights)
 	z.DesicionToMove(k)
 
 	// Хвост на карте обнулили

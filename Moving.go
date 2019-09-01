@@ -149,13 +149,18 @@ func (z *Snake) DesicionToMove(k *MAP) {
 	}
 	//Выбираем куда идти
 	//Желаемые 2 направления 0-left, 1-right, 2-up, 3-down
-	turn1, turn2 := maxs(&z.Brain.turns)
+
 	//Это чтоб себя не ела. Ходит на желаемый из возможных направлений
+	turn1, turn2 := maxs(&z.Brain.turns)
+
 	if z.Brain.desicion == turn1 {
 		z.Brain.desicion = turn2
 	} else {
 		z.Brain.desicion = turn1
 	}
+
+	// z.Brain.desicion = max(&z.Brain.turns)
+
 }
 func LeakyRELU(neiron float64) float64 {
 	if neiron > 0 {
@@ -184,6 +189,15 @@ func maxs(mass *[4]float64) (int, int) {
 		}
 	}
 	return max1, max2
+}
+func max(mass *[4]float64) int {
+	max1 := 0
+	for i := 1; i < 4; i++ {
+		if (*mass)[i] > (*mass)[max1] {
+			max1 = i
+		}
+	}
+	return max1
 }
 
 func (z *Snake) dead() {

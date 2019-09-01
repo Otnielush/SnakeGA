@@ -18,6 +18,10 @@ func (s *Mode) Selection(k *LocalParam) {
 	if k.population == 1 {
 		return
 	}
+	// if k.bestRes >= 4 {
+	// 	k.bestResultApple = 0
+	// 	k.bestRes = 0
+	// }
 
 	temp := make([]Snake, len(s.Snakes))
 	copy(temp, s.Snakes)
@@ -29,8 +33,9 @@ func (s *Mode) Selection(k *LocalParam) {
 	if temp[0].ApplesEaten < k.bestResultApple {
 		// k.newGen = false
 		pf("Тупые! %d-(%d) ", temp[0].ApplesEaten, k.bestResultApple)
-
+		k.bestRes++
 	} else {
+		k.bestRes = 0
 		pf("Best %d-(%d) ", temp[0].ApplesEaten, k.bestResultApple)
 		// k.newGen = true
 		copy(s.Snakes, temp)
@@ -40,20 +45,11 @@ func (s *Mode) Selection(k *LocalParam) {
 		// p("3.", s.MySnake.Moves)
 
 	}
-	for i := 3; i < k.population; i++ {
-		s.Snakes[i] = Snake{}
+	for i := 3; i < 6; i++ {
+		s.Snakes[i] = s.Snakes[i-3]
 	}
-	for i := 0; i < k.population; i++ {
-		s.Snakes[i].tail = make([]Possition, k.lenSnakeStart)
-	}
-}
 
-func (s *Mode) Selection2(k *LocalParam) {
-	if k.population == 1 {
-		return
-	}
-	InsertionSort(&s.Snakes)
-	for i := 3; i < k.population; i++ {
+	for i := 6; i < k.population; i++ {
 		s.Snakes[i] = Snake{}
 	}
 	for i := 0; i < k.population; i++ {
@@ -113,26 +109,29 @@ func (s *Mode) NewPopulation(p *LocalParam, k *MAP) {
 			s.Snakes[i].Generation = s.Snakes[0].Generation
 			s.Snakes[i].Brain.Weights = s.Snakes[0].Brain.Weights
 			s.Snakes[i].Mutation(numMut, p.mutationRate)
-			s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
+			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
 		}
 	} else {
-		for i := 3; i < p.population/2; i++ {
+		for i := 6; i < p.population*3/4; i++ {
 			s.Snakes[i].Generation = s.Snakes[0].Generation
 			s.Snakes[i].Brain.Weights = s.Snakes[0].Brain.Weights
-			s.Snakes[i].Mutation(numMut, p.mutationRate)
-			s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
+			// s.Snakes[i].Mutation(numMut, p.mutationRate)
+			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
 		}
-		for i := p.population / 2; i < p.population*3/4; i++ {
+		for i := p.population * 3 / 4; i < p.population*6/8; i++ {
 			s.Snakes[i].Generation = s.Snakes[1].Generation
 			s.Snakes[i].Brain.Weights = s.Snakes[1].Brain.Weights
-			s.Snakes[i].Mutation(numMut, p.mutationRate)
-			s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
+			// s.Snakes[i].Mutation(numMut, p.mutationRate)
+			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
 		}
-		for i := p.population * 3 / 4; i < p.population; i++ {
+		for i := p.population * 6 / 8; i < p.population; i++ {
 			s.Snakes[i].Generation = s.Snakes[2].Generation
 			s.Snakes[i].Brain.Weights = s.Snakes[2].Brain.Weights
+			// s.Snakes[i].Mutation(numMut, p.mutationRate)
+			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
+		}
+		for i := 3; i < p.population; i++ {
 			s.Snakes[i].Mutation(numMut, p.mutationRate)
-			s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
 		}
 	}
 
@@ -183,6 +182,7 @@ func NewSnake(lenghtTail int) Snake {
 
 	// 0-left, 1-right, 2-up, 3-down
 	//яблоки
+
 	for i := 36; i < 81; i += 11 {
 		temp.Brain.Weights[i][0] = 2
 	}

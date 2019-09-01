@@ -61,6 +61,7 @@ type LocalParam struct {
 	numLeaders      int
 	restart         bool
 	bestResultApple int
+	bestRes         int
 	newGen          bool
 	generation      int
 }
@@ -126,7 +127,7 @@ func paintSquare(x, y, tip int, pixels []byte) {
 	}
 }
 
-func (k *LocalParam) update(keyState []uint8) {
+func (k *LocalParam) update(keyState []uint8, s *Snake) {
 	if keyState[sdl.SCANCODE_UP] != 0 && k.speed >= 4 {
 		k.speed /= 2
 		p("Speed", 1000/k.speed, "per second")
@@ -157,7 +158,21 @@ func (k *LocalParam) update(keyState []uint8) {
 		}
 		p("MutationRate", k.mutationRate)
 	} else if keyState[sdl.SCANCODE_W] != 0 {
-		pf("\nHi! \n")
+		pf("\nИсправление эволюции (+/-)\n")
+		p("1.", s.Brain.Weights[60][2])
+		for j := 0; j < 4; j++ {
+			for i := 0; i < 121; i++ {
+				if s.Brain.Weights[i][j] < 0 {
+					s.Brain.Weights[i][j] *= -1
+				}
+			}
+			for i := 121; i < 242; i++ {
+				if s.Brain.Weights[i][j] > 0 {
+					s.Brain.Weights[i][j] *= -1
+				}
+			}
+		}
+		p("2.", s.Brain.Weights[60][2])
 		sdl.Delay(1000)
 	}
 }
@@ -188,7 +203,7 @@ func main() {
 		mutationRate:  1,
 		population:    12,
 		numLeaders:    3,
-		lenSnakeStart: 4,
+		lenSnakeStart: 3,
 		numMut:        24, //из 242
 		newGen:        true,
 		generation:    1,
@@ -281,7 +296,7 @@ func main() {
 				running = false
 
 				learn.Snakes[0].Save("1")
-				p("ne op op ", learn.Snakes[0].Brain.Weights)
+				pf("ne op op %2.3f\n", learn.Snakes[0].Brain.Weights)
 				learn.Snakes[1].Save("2")
 				learn.Snakes[2].Save("3")
 
@@ -349,7 +364,7 @@ func main() {
 		}
 
 		// Управление
-		param.update(keyState)
+		param.update(keyState, &learn.Snakes[0])
 
 		// Вывод на экран
 		tex.Update(nil, pixels, winWidth*4)
@@ -412,9 +427,9 @@ func (z *Snake) Load(op *os.File) {
 func (s *Snake) Save(a string) {
 
 	db1, _ := json.Marshal(s)
-	if a == "1" {
-		p("op op", s.Brain.Weights)
-	}
+	// if a == "1" {
+	// 	p("op op", s.Brain.Weights)
+	// }
 	ar := fmt.Sprint("snakeLeader", a, ".json")
 	f, _ := os.Create(ar)
 	kama, _ := f.Write(db1)

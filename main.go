@@ -15,34 +15,62 @@ const (
 	mapWidth                = 100
 	mapHeight               = 50
 	winWidth, winHeight int = 1000, 500
+	aRELU                   = 0.01 // LeakyRELU коэфициент
 )
 
 var p = fmt.Println
 var pf = fmt.Printf
 
-// Создать карту
+// Разные змеи: учёба, спаринг своя и чужая
+type Mode struct {
+	Snakes     []Snake `json:"Snakes"` // Учёба
+	MySnake    Snake   // спаринг
+	EnemySnake Snake   // спаринг
+}
+
+type Snake struct {
+	head        Possition
+	tail        []Possition
+	Brain       Brain `json:"Brain"`
+	ApplesEaten int   `json:"ApplesEaten"`
+	Moves       int
+	alive       bool
+	color       color
+	Generation  int
+}
+type Possition struct {
+	X, Y int
+}
+type Brain struct {
+	vision   [50]float64    //0-24 на яблоко, 25-50 на преграду
+	turns    [4]float64     //0-left, 1-right, 2-up, 3-down
+	desicion int            //left, right, up, down
+	Weights  [50][4]float64 `json:"Weights"` //50*4=200
+}
+type color struct {
+	r, g, b byte
+}
+
+// Структура для параметров
 type LocalParam struct {
-	karta           MAP
-	generation      int
 	speed           uint32
 	mutationRate    float64
 	numMut          int
 	population      int
-	snakes          []Snake `json:"snakes"`
 	lenSnakeStart   int
 	numLeaders      int
 	restart         bool
 	bestResultApple int
+	newGen          bool
+	generation      int
 }
+
+// Создать карту
 type MAP struct {
-	width, height int
-	apples        int
-	maxApples     int
-	eaten         int
-	kletki        [mapWidth][mapHeight]int //0-пусто, 1-яблоко, 2 , Преграды: 3 - змея, 4 - голова, 5 - преграда ,6...
-}
-type color struct {
-	r, g, b byte
+	kletki    [mapWidth][mapHeight]int //0-пусто, 1-яблоко, 2 , Преграды: 3 - змея, 4 - голова, 5 - преграда ,6...
+	apples    int
+	maxApples int
+	eaten     int
 }
 
 func setPixel(x, y int, c color, pixels []byte) {
@@ -129,28 +157,29 @@ func (k *LocalParam) update(keyState []uint8) {
 		}
 		p("MutationRate", k.mutationRate)
 	} else if keyState[sdl.SCANCODE_W] != 0 {
-		pf("\nsnake 1: %1.2f\n\n", k.snakes[0].Brain.Weights)
+		pf("\nHi! \n")
 		sdl.Delay(1000)
 	}
 }
 
-func (k *LocalParam) startPopulation(numMut int) {
-	k.karta.kletki[0][0] = 5
-	k.karta.kletki[0][1] = 5
-	k.karta.kletki[1][1] = 5
-	for i := 0; i < k.population; i++ {
-		k.snakes[i].head.X, k.snakes[i].head.Y = 5+(5*i), 15+15*(i%3)
-		k.snakes[i].alive = true
-		k.karta.kletki[5+(5*i)][15+15*(i%3)] = 4
+func (s *Mode) startPopulation(k *MAP, p LocalParam) {
+	k.kletki[0][0] = 5
+	k.kletki[0][1] = 5
+	k.kletki[1][1] = 5
+	for i := 0; i < p.population; i++ {
+		s.Snakes[i] = NewSnake(p.lenSnakeStart)
+		s.Snakes[i].head.X, s.Snakes[i].head.Y = 5+(5*i), 15+15*(i%3)
+		s.Snakes[i].alive = true
+		k.kletki[5+(5*i)][15+15*(i%3)] = 4
 
-		k.snakes[i].Mutation(numMut, k.mutationRate)
+		s.Snakes[i].Mutation(50, p.mutationRate)
 	}
 }
 
 func main() {
+
 	// Важные переменные
-	this := LocalParam{
-		karta:         MAP{width: mapWidth, height: mapHeight, maxApples: 50, apples: 0, eaten: 0},
+	param := LocalParam{
 		restart:       false,
 		speed:         128,
 		mutationRate:  1,
@@ -158,44 +187,64 @@ func main() {
 		numLeaders:    3,
 		lenSnakeStart: 3,
 		numMut:        5,
+		newGen:        true,
 		generation:    1,
 	}
+
+	// Карта
+	karta := MAP{maxApples: 50, apples: 0, eaten: 0}
+
+	// Обучение змей
+	learn := Mode{}
 
 	// запуск таймера
 	timeLimit := time.Second * 15
 	timer := time.Now().Add(timeLimit)
 
-	// Если есть сохранения то загружает
-	op, err := os.Open("snakeLeaders.json")
+	//Загрузка
+	op, err := os.Open("snakeLeader1.json")
+	// Если нет сохранений
 	if err != nil {
 		op.Close()
-		this.snakes = make([]Snake, this.population)
-		for i := 0; i < this.population; i++ {
-			this.snakes[i].tail = make([]Possition, this.lenSnakeStart)
+		learn.Snakes = make([]Snake, param.population)
+		for i := 0; i < param.population; i++ {
+			learn.Snakes[i].tail = make([]Possition, param.lenSnakeStart)
 		}
-		this.startPopulation(50)
-		this.createApple()
+
+		learn.startPopulation(&karta, param)
+		karta.createApple()
 
 	} else {
-		this.snakes = make([]Snake, 3)
-		for i := 0; i < 3; i++ {
-			this.snakes[i].Mutation(50, 0)
+		// Если есть сохранения то загружает
+
+		learn.Snakes = make([]Snake, param.population)
+		// for i := 0; i < 3; i++ {
+		// 	learn.Snakes[i].Mutation(50, 0)
+		// }
+
+		for i := 0; i < param.population; i++ {
+			learn.Snakes[i].tail = make([]Possition, param.lenSnakeStart)
+			learn.Snakes[i].alive = false
 		}
 
-		this.snakes[0].Load(op)
+		learn.Snakes[0].Load(op)
 
-		pf("snake 1: %1.2f\n", this.snakes[0].Brain.Weights)
-		this.generation = this.snakes[0].Generation
-		this.bestResultApple = this.snakes[0].ApplesEaten
-		p("Generation loaded:", this.generation)
-		this.snakes = make([]Snake, this.population)
-		for i := 0; i < this.population; i++ {
-			this.snakes[i].tail = make([]Possition, this.lenSnakeStart)
-			this.snakes[i].alive = false
-		}
+		pf("snake 1: %1.2f\n", learn.Snakes[0].Brain.Weights)
+		param.generation = learn.Snakes[0].Generation
+		param.bestResultApple = learn.Snakes[0].ApplesEaten
+		p("Generation loaded:", param.generation)
+		op.Close()
 
-		this.placeSnake(3)
-		this.createApple()
+		op, err = os.Open("snakeLeader2.json")
+		learn.Snakes[1].Load(op)
+		op.Close()
+
+		op, err = os.Open("snakeLeader3.json")
+		learn.Snakes[1].Load(op)
+		op.Close()
+
+		learn.placeSnake(&karta, 3)
+		karta.createApple()
 	}
 	// Графика
 	pixels := make([]byte, winWidth*winHeight*4)
@@ -228,11 +277,10 @@ func main() {
 			case *sdl.QuitEvent:
 				running = false
 
-				db1, _ := json.Marshal(this.snakes[0])
-				f, _ := os.Create("snakeLeaders.json")
-				kama, _ := f.Write(db1)
-				f.Close()
-				fmt.Println("Файл сохранён. Байт записано:", kama)
+				learn.Snakes[0].Save("1")
+				p("ne op op ", learn.Snakes[0].Brain.Weights)
+				learn.Snakes[1].Save("2")
+				learn.Snakes[2].Save("3")
 
 				break
 			}
@@ -240,11 +288,11 @@ func main() {
 
 		// Движение
 		// clear(&this.karta, 1)
-		alives := len(this.snakes)
-		for i := 0; i < len(this.snakes); i++ {
-			if this.snakes[i].alive {
-				this.snakes[i].Move(&this)
-				// pf("|%d %v; %d: %d %d (%d)", i, snakes[i].alive, snakes[i].Brain.desicion, snakes[i].head.X, snakes[i].head.Y, len(snakes[i].tail)) //0-left, 1-right, 2-up, 3-down
+		alives := len(learn.Snakes)
+		for i := 0; i < len(learn.Snakes); i++ {
+			if learn.Snakes[i].alive {
+				learn.Snakes[i].Move(&karta)
+				// pf("|%d %v; %d: %d %d (%d)", i, Snakes[i].alive, Snakes[i].Brain.desicion, Snakes[i].head.X, Snakes[i].head.Y, len(Snakes[i].tail)) //0-left, 1-right, 2-up, 3-down
 			} else {
 				alives--
 			}
@@ -252,19 +300,19 @@ func main() {
 		// pf("\n(--%d--)\n", alives)
 
 		// New Generation
-		if alives <= 0 || this.restart || !time.Now().Before(timer) {
-			clear(&this.karta, 0)
-			this.karta.apples = 0
-			this.createApple()
+		if alives <= 0 || param.restart || !time.Now().Before(timer) {
+			clear(&karta, 0)
+			karta.apples = 0
+			karta.createApple()
 			// p("karta", karta)
-			// p("main:", this.snakes[4].ApplesEaten)
-			this.Selection(&this.snakes)
+			// p("main:", learn.Snakes[4].ApplesEaten)
+			learn.Selection(&param)
 
-			this.NewPopulation(&this.snakes)
-			this.generation++
-			pf(" Gen: %d; Eaten: %d, Time: %v\n", this.generation, this.karta.eaten, time.Now().Sub(timer))
-			this.karta.eaten = 0
-			this.restart = false
+			learn.NewPopulation(&param, &karta)
+			param.generation++
+			pf(" Gen: %d; Eaten: %d, Time: %v\n", param.generation, karta.eaten, time.Now().Sub(timer))
+			karta.eaten = 0
+			param.restart = false
 			timer = time.Now().Add(timeLimit)
 			sdl.Delay(100)
 		}
@@ -291,21 +339,21 @@ func main() {
 		// Графика
 		for y := 0; y < mapHeight; y++ {
 			for x := 0; x < mapWidth; x++ {
-				if this.karta.kletki[x][y] != 0 {
-					paintSquare(x, y, this.karta.kletki[x][y], pixels)
+				if karta.kletki[x][y] != 0 {
+					paintSquare(x, y, karta.kletki[x][y], pixels)
 				}
 			}
 		}
 
 		// Управление
-		this.update(keyState)
+		param.update(keyState)
 
 		// Вывод на экран
 		tex.Update(nil, pixels, winWidth*4)
 		renderer.Copy(tex, nil, nil)
 		renderer.Present()
 
-		sdl.Delay(this.speed)
+		sdl.Delay(param.speed)
 	}
 
 }
@@ -329,7 +377,7 @@ func clear(karta *MAP, apple int) {
 }
 
 // Load
-func (z *Snake) Load(op *os.File) {
+func (z *Mode) Load2(op *os.File) {
 	stat, _ := op.Stat()
 	p("__", stat, "__")
 	b1 := make([]byte, stat.Size())
@@ -339,5 +387,29 @@ func (z *Snake) Load(op *os.File) {
 
 	op.Close()
 	p("Прочитаны байты:", n)
+	p("Веса:", z.Snakes[0].Brain.Weights)
+}
+
+func (z *Snake) Load(op *os.File) {
+	stat, _ := op.Stat()
+	b1 := make([]byte, stat.Size())
+
+	n, _ := op.Read(b1)
+	_ = json.Unmarshal(b1, z)
+
+	op.Close()
+	p("Прочитаны байты:", n)
 	p("Веса:", z.Brain.Weights)
+}
+
+func (s *Snake) Save(a string) {
+
+	db1, _ := json.Marshal(s)
+	p("op op", s.Brain.Weights)
+
+	ar := fmt.Sprint("snakeLeader", a, ".json")
+	f, _ := os.Create(ar)
+	kama, _ := f.Write(db1)
+	f.Close()
+	fmt.Println("Файл сохранён. Байт записано:", kama)
 }

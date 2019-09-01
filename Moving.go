@@ -16,113 +16,95 @@ import "math"
 
 //--------------------набросок--------------------
 
-type Snake struct {
-	head        Possition
-	tail        []Possition
-	Brain       Brain `json:"Brain"`
-	ApplesEaten int   `json:"ApplesEaten"`
-	Moves       int
-	alive       bool
-	color       color
-	Generation  int
-}
-type Possition struct {
-	X, Y int
-}
-type Brain struct {
-	vision   [50]float64    //0-24 на яблоко, 25-50 на преграду
-	turns    [4]float64     //0-left, 1-right, 2-up, 3-down
-	desicion int            //left, right, up, down
-	Weights  [50][4]float64 `json:"Weights"` //50*4=200
-}
-
 //For moving
-func (z *Snake) Move(k *LocalParam) {
-	// pf("___snakes: %1.2f\n", z.Brain.Weights)
+func (z *Snake) Move(k *MAP) {
+	// pf("___Snakes: %1.2f\n", z.Brain.Weights)
 	z.DesicionToMove(k)
+
+	// p("hhh", z.tail[len(z.tail)-1])
 
 	// Хвост на карте обнулили
 
 	switch z.Brain.desicion {
 	case 0: //left
 		// Пошла в стенку/преграду/змею
-		if z.head.X <= 0 || k.karta.kletki[z.head.X-1][z.head.Y] >= 3 {
+		if z.head.X <= 0 || k.kletki[z.head.X-1][z.head.Y] >= 3 {
 			z.alive = false
 			z.dead()
 			return
 		}
-		k.karta.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
+		k.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
 		for t := len(z.tail) - 1; t > 0; t-- {
 			z.tail[t].X, z.tail[t].Y = z.tail[t-1].X, z.tail[t-1].Y
-			k.karta.kletki[z.tail[t].X][z.tail[t].Y] = 3 // потом убрать
+			k.kletki[z.tail[t].X][z.tail[t].Y] = 3 // потом убрать
 		}
 		z.tail[0].X, z.tail[0].Y = z.head.X, z.head.Y
-		k.karta.kletki[z.tail[0].X][z.tail[0].Y] = 3
+		k.kletki[z.tail[0].X][z.tail[0].Y] = 3
 		z.head.X--
 		z.Brain.desicion = 1
 	case 1: //right
-		if z.head.X >= mapWidth-1 || k.karta.kletki[z.head.X+1][z.head.Y] >= 3 {
+		if z.head.X >= mapWidth-1 || k.kletki[z.head.X+1][z.head.Y] >= 3 {
 			z.alive = false
 			z.dead()
 			return
 		}
-		k.karta.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
+		k.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
 		for t := len(z.tail) - 1; t > 0; t-- {
 			z.tail[t].X, z.tail[t].Y = z.tail[t-1].X, z.tail[t-1].Y
-			k.karta.kletki[z.tail[t].X][z.tail[t].Y] = 3
+			k.kletki[z.tail[t].X][z.tail[t].Y] = 3
 		}
 		z.tail[0].X, z.tail[0].Y = z.head.X, z.head.Y
-		k.karta.kletki[z.tail[0].X][z.tail[0].Y] = 3
+		k.kletki[z.tail[0].X][z.tail[0].Y] = 3
 		z.head.X++
 		z.Brain.desicion = 0
 	case 2: //up
-		if z.head.Y <= 0 || k.karta.kletki[z.head.X][z.head.Y-1] >= 3 {
+		if z.head.Y <= 0 || k.kletki[z.head.X][z.head.Y-1] >= 3 {
 			z.alive = false
 			z.dead()
 			return
 		}
-		k.karta.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
+		k.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
 		for t := len(z.tail) - 1; t > 0; t-- {
 			z.tail[t].X, z.tail[t].Y = z.tail[t-1].X, z.tail[t-1].Y
-			k.karta.kletki[z.tail[t].X][z.tail[t].Y] = 3
+			k.kletki[z.tail[t].X][z.tail[t].Y] = 3
 		}
 		z.tail[0].X, z.tail[0].Y = z.head.X, z.head.Y
-		k.karta.kletki[z.tail[0].X][z.tail[0].Y] = 3
+		k.kletki[z.tail[0].X][z.tail[0].Y] = 3
 		z.head.Y--
 		z.Brain.desicion = 3
 	case 3: //down
-		if z.head.Y >= mapHeight-1 || k.karta.kletki[z.head.X][z.head.Y+1] >= 3 {
+		if z.head.Y >= mapHeight-1 || k.kletki[z.head.X][z.head.Y+1] >= 3 {
 			z.alive = false
 			z.dead()
 			return
 		}
-		k.karta.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
+		k.kletki[z.tail[len(z.tail)-1].X][z.tail[len(z.tail)-1].Y] = 0
 		for t := len(z.tail) - 1; t > 0; t-- {
 			z.tail[t].X, z.tail[t].Y = z.tail[t-1].X, z.tail[t-1].Y
-			k.karta.kletki[z.tail[t].X][z.tail[t].Y] = 3
+			k.kletki[z.tail[t].X][z.tail[t].Y] = 3
 		}
 		z.tail[0].X, z.tail[0].Y = z.head.X, z.head.Y
-		k.karta.kletki[z.tail[0].X][z.tail[0].Y] = 3
+		k.kletki[z.tail[0].X][z.tail[0].Y] = 3
 		z.head.Y++
 		z.Brain.desicion = 2
 	}
 	// Яблочки!
-	if k.karta.kletki[z.head.X][z.head.Y] == 1 {
+	if k.kletki[z.head.X][z.head.Y] == 1 {
 		z.ApplesEaten++
 		// p("Food!", z.ApplesEaten)
-		k.karta.eaten++
-		k.karta.apples--
+		k.eaten++
+		k.apples--
 		k.createApple()
 		//а можно прописать параметр длинну и не задействованые части хвоста держать вне карты
 		z.tail = append(z.tail, Possition{X: z.tail[len(z.tail)-1].X, Y: z.tail[len(z.tail)-1].Y})
 	}
 
 	//Нанесение положения головы змеи на карту
-	k.karta.kletki[z.head.X][z.head.Y] = 4
+	k.kletki[z.head.X][z.head.Y] = 4
 	z.Moves++
 }
 
-func (z *Snake) DesicionToMove(k *LocalParam) {
+func (z *Snake) DesicionToMove(k *MAP) {
 
 	// обнуление Зрения
 	for i := 0; i < len(z.Brain.vision); i++ {
@@ -142,7 +124,7 @@ func (z *Snake) DesicionToMove(k *LocalParam) {
 			if x < 0 || x >= mapWidth {
 				z.Brain.vision[neiro+25] = 1
 			} else {
-				switch k.karta.kletki[x][y] {
+				switch k.kletki[x][y] {
 				case 0: // Обнулили всё
 				case 1:
 					z.Brain.vision[neiro] = 1
@@ -175,11 +157,10 @@ func (z *Snake) DesicionToMove(k *LocalParam) {
 	}
 }
 func LeakyRELU(neiron float64) float64 {
-	a := 0.01 // Объявить в main
 	if neiron > 0 {
 		return neiron
 	} else {
-		return neiron * a
+		return neiron * aRELU
 	}
 }
 func Sigmoid(neiron float64) float64 {

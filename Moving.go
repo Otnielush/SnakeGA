@@ -1,5 +1,5 @@
 //Схема нейросети:
-//змея видит квадрат 5 на 5 = 25 для яблока и 25 для преграды
+//змея видит квадрат 11 на 11 = 121 для яблока и 121 для преграды
 //(Но можно не делать разные входы, а разными цифрами вводить разные элементы на карте. Нужно тестить)
 
 //50 входных нейронов, 4 средних (налево, направо, вверх, вниз) и на выход 1 вариант
@@ -111,18 +111,18 @@ func (z *Snake) DesicionToMove(k *MAP) {
 		z.Brain.vision[i] = 0
 	}
 	neiro := int(0) //Счётчик для массива входных нейронов
-	//Сканирует карту 5 на 5 от головы
-	for y := z.head.Y - 2; y <= z.head.Y+2; y++ {
+	//Сканирует карту 11 на 11 от головы
+	for y := z.head.Y - 5; y <= z.head.Y+5; y++ {
 		if y < 0 || y >= mapHeight {
-			for x := z.head.X - 2; x <= z.head.X+2; x++ {
-				z.Brain.vision[neiro+25] = 1
+			for x := z.head.X - 5; x <= z.head.X+5; x++ {
+				z.Brain.vision[neiro+121] = 1
 				neiro++
 			}
 			continue
 		}
-		for x := z.head.X - 2; x <= z.head.X+2; x++ {
+		for x := z.head.X - 5; x <= z.head.X+5; x++ {
 			if x < 0 || x >= mapWidth {
-				z.Brain.vision[neiro+25] = 1
+				z.Brain.vision[neiro+121] = 1
 			} else {
 				switch k.kletki[x][y] {
 				case 0: // Обнулили всё
@@ -131,7 +131,7 @@ func (z *Snake) DesicionToMove(k *MAP) {
 				case 2:
 					z.Brain.vision[neiro] = 0.5
 				case 3, 4, 5:
-					z.Brain.vision[neiro+25] = 1
+					z.Brain.vision[neiro+121] = 1
 				}
 			}
 			neiro++
@@ -141,9 +141,10 @@ func (z *Snake) DesicionToMove(k *MAP) {
 	//Вычисляем 4 варианта хода
 	for i := 0; i < 4; i++ {
 		var neiron float64 = 0
-		for j := 0; j < 50; j++ {
+		for j := 0; j < 242; j++ {
 			neiron += z.Brain.vision[j] * z.Brain.Weights[j][i]
 		}
+		neiron += 0.01 //Bias
 		z.Brain.turns[i] = LeakyRELU(neiron)
 	}
 	//Выбираем куда идти
@@ -160,7 +161,7 @@ func LeakyRELU(neiron float64) float64 {
 	if neiron > 0 {
 		return neiron
 	} else {
-		return neiron * aRELU
+		return neiron * aRELU // коэфициент для отрицательного значения
 	}
 }
 func Sigmoid(neiron float64) float64 {

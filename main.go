@@ -42,10 +42,10 @@ type Possition struct {
 	X, Y int
 }
 type Brain struct {
-	vision   [50]float64    //0-24 на яблоко, 25-50 на преграду
-	turns    [4]float64     //0-left, 1-right, 2-up, 3-down
-	desicion int            //left, right, up, down
-	Weights  [50][4]float64 `json:"Weights"` //50*4=200
+	vision   [242]float64    //0-120 на яблоко, 121-241 на преграду
+	turns    [4]float64      //0-left, 1-right, 2-up, 3-down
+	desicion int             //left, right, up, down
+	Weights  [242][4]float64 `json:"Weights"` //242*4=968
 }
 type color struct {
 	r, g, b byte
@@ -169,6 +169,9 @@ func (s *Mode) startPopulation(k *MAP, p LocalParam) {
 	for i := 0; i < p.population; i++ {
 		s.Snakes[i] = NewSnake(p.lenSnakeStart)
 		s.Snakes[i].head.X, s.Snakes[i].head.Y = 5+(5*i), 15+15*(i%3)
+		for j := 0; j < p.lenSnakeStart; j++ {
+			s.Snakes[i].tail[j].X, s.Snakes[i].tail[j].Y = s.Snakes[i].head.X, s.Snakes[i].head.Y
+		}
 		s.Snakes[i].alive = true
 		k.kletki[5+(5*i)][15+15*(i%3)] = 4
 
@@ -185,8 +188,8 @@ func main() {
 		mutationRate:  1,
 		population:    12,
 		numLeaders:    3,
-		lenSnakeStart: 3,
-		numMut:        5,
+		lenSnakeStart: 4,
+		numMut:        24, //из 242
 		newGen:        true,
 		generation:    1,
 	}
@@ -198,7 +201,7 @@ func main() {
 	learn := Mode{}
 
 	// запуск таймера
-	timeLimit := time.Second * 15
+	timeLimit := time.Second * 30
 	timer := time.Now().Add(timeLimit)
 
 	//Загрузка
@@ -310,7 +313,7 @@ func main() {
 
 			learn.NewPopulation(&param, &karta)
 			param.generation++
-			pf(" Gen: %d; Eaten: %d, Time: %v\n", param.generation, karta.eaten, time.Now().Sub(timer))
+			pf("Gen: %d; Eaten: %d, Time: %v\n", param.generation, karta.eaten, time.Now().Sub(timer))
 			karta.eaten = 0
 			param.restart = false
 			timer = time.Now().Add(timeLimit)
@@ -409,8 +412,9 @@ func (z *Snake) Load(op *os.File) {
 func (s *Snake) Save(a string) {
 
 	db1, _ := json.Marshal(s)
-	p("op op", s.Brain.Weights)
-
+	if a == "1" {
+		p("op op", s.Brain.Weights)
+	}
 	ar := fmt.Sprint("snakeLeader", a, ".json")
 	f, _ := os.Create(ar)
 	kama, _ := f.Write(db1)

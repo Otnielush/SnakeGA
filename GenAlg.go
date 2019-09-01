@@ -45,8 +45,10 @@ func (s *Mode) Selection(k *LocalParam) {
 
 	InsertionSort(&s.Snakes)
 
-	for i := 0; i < k.population; i++ {
+	for i := 3; i < k.population; i++ {
 		s.Snakes[i] = Snake{}
+	}
+	for i := 0; i < k.population; i++ {
 		s.Snakes[i].tail = make([]Possition, k.lenSnakeStart)
 	}
 
@@ -163,9 +165,13 @@ func (z *Snake) Mutation(numMut int, MutationRate float64) {
 	}
 }
 
+// Человеческий интелект :)
 func NewSnake(lenghtTail int) Snake {
 	temp := Snake{}
 	temp.tail = make([]Possition, lenghtTail)
+
+	//test
+	temp.Moves = 1000
 
 	// 0-left, 1-right, 2-up, 3-down
 	//яблоки

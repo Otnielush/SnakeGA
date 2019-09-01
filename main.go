@@ -229,7 +229,7 @@ func main() {
 
 		learn.Snakes[0].Load(op)
 
-		pf("snake 1: %1.2f\n", learn.Snakes[0].Brain.Weights)
+		// pf("snake 1: %1.2f\n", learn.Snakes[0].Brain.Weights)
 		param.generation = learn.Snakes[0].Generation
 		param.bestResultApple = learn.Snakes[0].ApplesEaten
 		p("Generation loaded:", param.generation)
@@ -240,7 +240,7 @@ func main() {
 		op.Close()
 
 		op, err = os.Open("snakeLeader3.json")
-		learn.Snakes[1].Load(op)
+		learn.Snakes[2].Load(op)
 		op.Close()
 
 		learn.placeSnake(&karta, 3)
@@ -394,12 +394,16 @@ func (z *Snake) Load(op *os.File) {
 	stat, _ := op.Stat()
 	b1 := make([]byte, stat.Size())
 
+	// p("1.", z.Moves)
+	// p("2.", &z.Moves)
 	n, _ := op.Read(b1)
 	_ = json.Unmarshal(b1, z)
 
+	// p("3.", z.Moves)
+	// p("4.", &z.Moves)
 	op.Close()
 	p("Прочитаны байты:", n)
-	p("Веса:", z.Brain.Weights)
+	// p("Веса:", z.Brain.Weights)
 }
 
 func (s *Snake) Save(a string) {

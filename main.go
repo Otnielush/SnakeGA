@@ -14,7 +14,7 @@ import (
 const (
 	mapWidth                = 100
 	mapHeight               = 50
-	winWidth, winHeight int = 1000, 500
+	winWidth, winHeight int = 1200, 600
 	aRELU                   = 0.01 // LeakyRELU коэфициент
 )
 
@@ -26,6 +26,7 @@ type Mode struct {
 	Snakes     []Snake `json:"Snakes"` // Учёба
 	MySnake    Snake   // спаринг
 	EnemySnake Snake   // спаринг
+
 }
 
 type Snake struct {
@@ -72,6 +73,14 @@ type MAP struct {
 	apples    int
 	maxApples int
 	eaten     int
+}
+
+// Кнопощке
+type interfaceGame struct {
+	buttons  []button
+	trainig  bool
+	fighting bool
+	menu     bool
 }
 
 func setPixel(x, y int, c color, pixels []byte) {
@@ -127,19 +136,20 @@ func paintSquare(x, y, tip int, pixels []byte) {
 	}
 }
 
-func (k *LocalParam) update(keyState []uint8, s *Snake) {
-	if keyState[sdl.SCANCODE_UP] != 0 && k.speed >= 4 {
+func (k *LocalParam) update(keyState []uint8, s *Mode) {
+	switch {
+	case keyState[sdl.SCANCODE_UP] != 0 && k.speed >= 4:
 		k.speed /= 2
 		p("Speed", 1000/k.speed, "per second")
 		sdl.Delay(200)
-	} else if keyState[sdl.SCANCODE_DOWN] != 0 {
+	case keyState[sdl.SCANCODE_DOWN] != 0:
 		k.speed *= 2
 		p("Speed", 1000/k.speed, "per second")
 		sdl.Delay(200)
-	} else if keyState[sdl.SCANCODE_N] != 0 {
+	case keyState[sdl.SCANCODE_N] != 0:
 		k.restart = true
 		sdl.Delay(1000)
-	} else if keyState[sdl.SCANCODE_LEFT] != 0 {
+	case keyState[sdl.SCANCODE_LEFT] != 0:
 		if k.mutationRate < -10 {
 			k.mutationRate = -10
 			sdl.Delay(200)
@@ -148,7 +158,7 @@ func (k *LocalParam) update(keyState []uint8, s *Snake) {
 			sdl.Delay(200)
 		}
 		p("MutationRate", k.mutationRate)
-	} else if keyState[sdl.SCANCODE_RIGHT] != 0 {
+	case keyState[sdl.SCANCODE_RIGHT] != 0:
 		if k.mutationRate > 10 {
 			k.mutationRate = 10
 			sdl.Delay(200)
@@ -157,23 +167,28 @@ func (k *LocalParam) update(keyState []uint8, s *Snake) {
 			sdl.Delay(100)
 		}
 		p("MutationRate", k.mutationRate)
-	} else if keyState[sdl.SCANCODE_W] != 0 {
+	case keyState[sdl.SCANCODE_W] != 0:
 		pf("\nИсправление эволюции (+/-)\n")
-		p("1.", s.Brain.Weights[60][2])
+		p("1.", s.Snakes[0].Brain.Weights[60][2])
 		for j := 0; j < 4; j++ {
 			for i := 0; i < 121; i++ {
-				if s.Brain.Weights[i][j] < 0 {
-					s.Brain.Weights[i][j] *= -1
+				if s.Snakes[0].Brain.Weights[i][j] < 0 {
+					s.Snakes[0].Brain.Weights[i][j] *= -1
 				}
 			}
 			for i := 121; i < 242; i++ {
-				if s.Brain.Weights[i][j] > 0 {
-					s.Brain.Weights[i][j] *= -1
+				if s.Snakes[0].Brain.Weights[i][j] > 0 {
+					s.Snakes[0].Brain.Weights[i][j] *= -1
 				}
 			}
 		}
-		p("2.", s.Brain.Weights[60][2])
+		p("2.", s.Snakes[0].Brain.Weights[60][2])
 		sdl.Delay(1000)
+	case keyState[sdl.SCANCODE_T] != 0:
+		// s.Snakes[0].Save("1")
+		// s.Snakes[1].Save("2")
+		// s.Snakes[2].Save("3")
+
 	}
 }
 
@@ -183,37 +198,108 @@ func (s *Mode) startPopulation(k *MAP, p LocalParam) {
 	k.kletki[1][1] = 5
 	for i := 0; i < p.population; i++ {
 		s.Snakes[i] = NewSnake(p.lenSnakeStart)
-		s.Snakes[i].head.X, s.Snakes[i].head.Y = 5+(5*i), 15+15*(i%3)
+		s.Snakes[i].head.X, s.Snakes[i].head.Y = 5+(5*i), 5+5*(i%3)
 		for j := 0; j < p.lenSnakeStart; j++ {
 			s.Snakes[i].tail[j].X, s.Snakes[i].tail[j].Y = s.Snakes[i].head.X, s.Snakes[i].head.Y
 		}
 		s.Snakes[i].alive = true
-		k.kletki[5+(5*i)][15+15*(i%3)] = 4
+		k.kletki[5+(5*i)][5+5*(i%3)] = 4
 
 		s.Snakes[i].Mutation(50, p.mutationRate)
 	}
 }
 
+//
 func main() {
-
 	// Важные переменные
 	param := LocalParam{
 		restart:       false,
 		speed:         128,
 		mutationRate:  1,
-		population:    12,
+		population:    10,
 		numLeaders:    3,
 		lenSnakeStart: 3,
 		numMut:        24, //из 242
 		newGen:        true,
 		generation:    1,
 	}
+	// Режим и змеи
+	learn := Mode{}
+
+	//------ Графика ---------------
+	pixels := make([]byte, winWidth*winHeight*4)
+
+	var err error
+	err = sdl.Init(sdl.INIT_EVERYTHING)
+	check(err)
+	defer sdl.Quit()
+
+	window, err := sdl.CreateWindow("Snake - Generation algorithm", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, int32(winWidth), int32(winHeight), sdl.WINDOW_SHOWN)
+	check(err)
+	defer window.Destroy()
+
+	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+	check(err)
+	defer renderer.Destroy()
+
+	tex, err := renderer.CreateTexture(sdl.PIXELFORMAT_ABGR8888, sdl.TEXTUREACCESS_STREAMING, int32(winWidth), int32(winHeight))
+	check(err)
+	defer tex.Destroy()
+
+	// Считывание клавы
+
+	keyState := sdl.GetKeyboardState()
+	//------------Графика----------------------
+
+	// Меню и интерфейс
+	inter := interfaceGame{trainig: false, fighting: false, menu: true}
+	inter.buttons = make([]button, 3)
+	// Кнопочке и табло
+	inter.buttons[0] = button{name: "chooseMod", pos: Possition{X: 5, Y: winHeight - 30}, width: 70, height: 25, color: color{r: 255, g: 204, b: 0}}
+	inter.buttons[1] = button{name: "fight", pos: Possition{X: winWidth/2 - 35, Y: winHeight / 2}, width: 70, height: 25, color: color{r: 255, g: 204, b: 0}}
+	inter.buttons[2] = button{name: "trainig", pos: Possition{X: winWidth/2 - 35, Y: winHeight/2 + 25}, width: 70, height: 25, color: color{r: 255, g: 153, b: 51}}
+
+Menu:
+	for inter.menu {
+		// Закрытие окна и сохранение
+		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+			switch event.(type) {
+			case *sdl.QuitEvent:
+				inter.menu = false
+				break
+			}
+		}
+
+		//Фон
+		for y := 0; y < winHeight; y++ {
+			for x := 0; x < winWidth; x++ {
+				setPixel(x, y, color{180, 180, 190}, pixels)
+			}
+		}
+
+		// Кнопочка
+		//inter.buttons[0].draw(pixels)
+		inter.buttons[1].draw(pixels)
+		inter.buttons[2].draw(pixels)
+
+		// Управление
+		// param.update(keyState, &learn)
+		mouseX, mouseY, mouseState := sdl.GetMouseState()
+		inter.mouseMenu(mouseX, mouseY, mouseState)
+
+		// Вывод на экран
+		tex.Update(nil, pixels, winWidth*4)
+		renderer.Copy(tex, nil, nil)
+		renderer.Present()
+
+		sdl.Delay(param.speed)
+
+	}
+
+	// TRAINIG+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	// Карта
-	karta := MAP{maxApples: 50, apples: 0, eaten: 0}
-
-	// Обучение змей
-	learn := Mode{}
+	karta := MAP{maxApples: 25, apples: 0, eaten: 0}
 
 	// запуск таймера
 	timeLimit := time.Second * 30
@@ -264,39 +350,19 @@ func main() {
 		learn.placeSnake(&karta, 3)
 		karta.createApple()
 	}
-	// Графика
-	pixels := make([]byte, winWidth*winHeight*4)
-
-	err = sdl.Init(sdl.INIT_EVERYTHING)
-	check(err)
-	defer sdl.Quit()
-
-	window, err := sdl.CreateWindow("Snake - Generation algorithm", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, int32(winWidth), int32(winHeight), sdl.WINDOW_SHOWN)
-	check(err)
-	defer window.Destroy()
-
-	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
-	check(err)
-	defer renderer.Destroy()
-
-	tex, err := renderer.CreateTexture(sdl.PIXELFORMAT_ABGR8888, sdl.TEXTUREACCESS_STREAMING, int32(winWidth), int32(winHeight))
-	check(err)
-	defer tex.Destroy()
-
-	// Считывание клавы
-	keyState := sdl.GetKeyboardState()
+	// TRAINING===============================================
 
 	// ACTION!!!
-	running := true
-	for running {
+
+	for inter.trainig {
 		// Закрытие окна и сохранение
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 			switch event.(type) {
 			case *sdl.QuitEvent:
-				running = false
+				inter.trainig = false
 
 				learn.Snakes[0].Save("1")
-				pf("ne op op %2.3f\n", learn.Snakes[0].Brain.Weights)
+				// pf("ne op op %2.3f\n", learn.Snakes[0].Brain.Weights)
 				learn.Snakes[1].Save("2")
 				learn.Snakes[2].Save("3")
 
@@ -343,13 +409,15 @@ func main() {
 		}
 
 		// Решетка
-		for y := 0; y < winHeight; y += 10 {
+		ystep := winHeight / mapHeight
+		xstep := winWidth / mapWidth
+		for y := 0; y < winHeight; y += ystep {
 			for x := 0; x < winWidth; x++ {
 				setPixel(x, y, color{160, 160, 255}, pixels)
 			}
 		}
 		for y := 0; y < winHeight; y++ {
-			for x := 0; x < winWidth; x += 10 {
+			for x := 0; x < winWidth; x += xstep {
 				setPixel(x, y, color{160, 160, 255}, pixels)
 			}
 		}
@@ -363,8 +431,23 @@ func main() {
 			}
 		}
 
+		// Кнопочка
+
+		for y := mapHeight - 3; y < mapHeight; y++ {
+			for x := 0; x < 7; x++ {
+				karta.kletki[x][y] = 5
+				paintSquare(x, y, karta.kletki[x][y], pixels)
+
+			}
+		}
+		inter.buttons[0].draw(pixels)
+		// inter.buttons[1].draw(pixels)
+		// inter.buttons[2].draw(pixels)
+
 		// Управление
-		param.update(keyState, &learn.Snakes[0])
+		param.update(keyState, &learn)
+		mouseX, mouseY, mouseState := sdl.GetMouseState()
+		inter.mouseTraining(mouseX, mouseY, mouseState)
 
 		// Вывод на экран
 		tex.Update(nil, pixels, winWidth*4)
@@ -372,6 +455,13 @@ func main() {
 		renderer.Present()
 
 		sdl.Delay(param.speed)
+
+		if inter.menu {
+			learn.Snakes[0].Save("1")
+			learn.Snakes[1].Save("2")
+			learn.Snakes[2].Save("3")
+			goto Menu
+		}
 	}
 
 }
@@ -420,7 +510,7 @@ func (z *Snake) Load(op *os.File) {
 	// p("3.", z.Moves)
 	// p("4.", &z.Moves)
 	op.Close()
-	p("Прочитаны байты:", n)
+	p("Змея загружена. Прочитаны байты:", n)
 	// p("Веса:", z.Brain.Weights)
 }
 

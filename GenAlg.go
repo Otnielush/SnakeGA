@@ -68,13 +68,21 @@ func InsertionSort(mass *[]Snake) {
 	}
 }
 
-//ХЗ нужно или нет
-func (k *LocalParam) Crossover() {
-	//Новое поколение
-	//Создать новых потомков к прошлым лидерам (num число в поколении)
-	for i := k.numLeaders - 1; i < k.population; i++ {
-
+//Скрещиваем родителей и возвращаем потомка
+func CrossOver(father, mother Brain) Brain {
+	child := Brain{}
+	for j := 0; j < 4; j++ {
+		for i := 0; i < 242; i++ {
+			if rand.Intn(2) == 1 {
+				child.Weights[i][j] = father.Weights[i][j]
+				// p("Papka")
+			} else {
+				child.Weights[i][j] = mother.Weights[i][j]
+				// p("mamka")
+			}
+		}
 	}
+	return child
 }
 
 func (s *Mode) NewPopulation(p *LocalParam, k *MAP) {
@@ -92,11 +100,11 @@ func (s *Mode) NewPopulation(p *LocalParam, k *MAP) {
 
 	if p.population == 1 {
 		s.Snakes[0].Mutation(numMut, p.mutationRate)
-		s.Snakes[0].head.X, s.Snakes[0].head.Y = 5+(5*1), 15+15*1
+		s.Snakes[0].head.X, s.Snakes[0].head.Y = 5+(5*1), 10+10*1
 		s.Snakes[0].alive = true
 		s.Snakes[0].Generation++
 		s.Snakes[0].tail = make([]Possition, p.lenSnakeStart)
-		k.kletki[5+(5*1)][15+15*(1)] = 4
+		k.kletki[5+(5*1)][10+10*(1)] = 4
 
 		for j := 0; j < len(s.Snakes[0].tail); j++ {
 			s.Snakes[0].tail[j].X, s.Snakes[0].tail[j].Y = s.Snakes[0].head.X, s.Snakes[0].head.Y-1-j
@@ -109,26 +117,19 @@ func (s *Mode) NewPopulation(p *LocalParam, k *MAP) {
 			s.Snakes[i].Generation = s.Snakes[0].Generation
 			s.Snakes[i].Brain.Weights = s.Snakes[0].Brain.Weights
 			s.Snakes[i].Mutation(numMut, p.mutationRate)
-			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
 		}
 	} else {
 		for i := 6; i < p.population*3/4; i++ {
 			s.Snakes[i].Generation = s.Snakes[0].Generation
 			s.Snakes[i].Brain.Weights = s.Snakes[0].Brain.Weights
-			// s.Snakes[i].Mutation(numMut, p.mutationRate)
-			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
 		}
 		for i := p.population * 3 / 4; i < p.population*6/8; i++ {
 			s.Snakes[i].Generation = s.Snakes[1].Generation
-			s.Snakes[i].Brain.Weights = s.Snakes[1].Brain.Weights
-			// s.Snakes[i].Mutation(numMut, p.mutationRate)
-			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
+			s.Snakes[i].Brain = CrossOver(s.Snakes[0].Brain, s.Snakes[1].Brain)
 		}
 		for i := p.population * 6 / 8; i < p.population; i++ {
 			s.Snakes[i].Generation = s.Snakes[2].Generation
-			s.Snakes[i].Brain.Weights = s.Snakes[2].Brain.Weights
-			// s.Snakes[i].Mutation(numMut, p.mutationRate)
-			// s.Snakes[i].tail = make([]Possition, p.lenSnakeStart)
+			s.Snakes[i].Brain = CrossOver(s.Snakes[0].Brain, s.Snakes[2].Brain)
 		}
 		for i := 3; i < p.population; i++ {
 			s.Snakes[i].Mutation(numMut, p.mutationRate)
@@ -147,9 +148,9 @@ func (s *Mode) NewPopulation(p *LocalParam, k *MAP) {
 
 func (s *Mode) placeSnake(k *MAP, num int) {
 	for i := 0; i < num; i++ {
-		s.Snakes[i].head.X, s.Snakes[i].head.Y = 5+(5*i), 15+15*(i%3)
+		s.Snakes[i].head.X, s.Snakes[i].head.Y = 4+(4*i), 6+6*(i%3)
 		s.Snakes[i].alive = true
-		k.kletki[5+(5*i)][15+15*(i%3)] = 4
+		k.kletki[4+(4*i)][6+6*(i%3)] = 4
 
 		// for j := 0; j < k.lenSnakeStart; j++ {
 		// 	k.Snakes[i].tail[j].X, k.Snakes[i].tail[j].Y = k.Snakes[i].head.X, k.Snakes[i].head.Y-j
